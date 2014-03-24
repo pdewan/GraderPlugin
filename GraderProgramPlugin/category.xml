@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <site>
-   <category-def name="GraderProgram" label="Grader Program"/>
+   <feature url="features/com.unc.cs.graderprogramplugin_1.0.0.jar" id="com.unc.cs.graderprogramplugin" version="1.0.0">
+      <category name="GraderPlugin"/>
+   </feature>
+   <bundle id="GraderProgramPlugin" version="1.0.0">
+      <category name="GraderPlugin"/>
+   </bundle>
+   <category-def name="GraderPlugin" label="Grader Plugin"/>
 </site>

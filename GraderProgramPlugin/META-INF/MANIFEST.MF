@@ -1,6 +1,6 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
-Bundle-Name: Grader Program
+Bundle-Name: Grader Program Plugin
 Bundle-SymbolicName: GraderProgramPlugin;singleton:=true
 Bundle-Version: 1.0.0
 Bundle-Activator: com.unc.cs.graderprogramplugin.Activator

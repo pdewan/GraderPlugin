@@ -35,9 +35,16 @@ public class OnyenAuthenticator {
 	private static String getFormHTML() throws MalformedURLException, IOException {
 		connect();
 		grader.setRequestMethod("POST");
+		grader.setRequestProperty("getpid", "pid");
+		grader.setRequestProperty("getpid", "givenName");
+		grader.setRequestProperty("getpid", "uncPreferredSurname");
+		StringBuilder post = new StringBuilder();
+		post.append("getpid=").append("pid");
+		post.append("&getpid=").append("givenName");
+		post.append("&getpid=").append("uncPreferredSurname");
 		grader.setDoOutput(true);
 		grader.setDoInput(true);
-		grader.getOutputStream().write(42);
+		grader.getOutputStream().write(post.toString().getBytes());
 		
 		return getResponse();
 	}
@@ -51,11 +58,13 @@ public class OnyenAuthenticator {
 
 		String cookie = getCookieValue(html);
 		String point = getPointValue(html);
-		
 		grader.setRequestProperty("_COOKIE_", cookie);
 		grader.setRequestProperty("_POINT_", point);
 		grader.setRequestProperty("onyen", username);
 		grader.setRequestProperty("pw", password);
+		grader.setRequestProperty("getpid", "pid");
+		grader.setRequestProperty("getpid", "givenName");
+		grader.setRequestProperty("getpid", "uncPreferredSurname");
 		grader.setRequestProperty("submit", "Continue");
 		
 		StringBuilder post = new StringBuilder();
@@ -63,16 +72,19 @@ public class OnyenAuthenticator {
 		post.append("&_POINT_=").append(point);
 		post.append("&onyen=").append(username);
 		post.append("&pw=").append(password);
+		post.append("&getpid=").append("pid");
+		post.append("&getpid=").append("givenName");
+		post.append("&getpid=").append("uncPreferredSurname");
 		post.append("&submit=").append("Continue");
 		
-		//System.out.println(post.toString());
+		System.out.println(post.toString());
 		
 		grader.setDoOutput(true);
 		grader.setDoInput(true);
 		grader.getOutputStream().write(post.toString().getBytes());
 
 		html = getResponse();
-		//System.out.println(html);
+		System.out.println(html);
 		return getVFYKeyValue(html);
 	}
 
