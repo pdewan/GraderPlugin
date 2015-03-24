@@ -4,8 +4,14 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.SocketException;
+import java.net.URI;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 
 import org.eclipse.core.resources.IProject;
@@ -39,6 +45,7 @@ import org.eclipse.ui.browser.IWebBrowser;
 import org.eclipse.ui.part.ViewPart;
 
 import com.unc.cs.graderprogramplugin.com.GraderCommunicator;
+import com.unc.cs.graderprogramplugin.com.HttpGraderCommunicator;
 import com.unc.cs.graderprogramplugin.com.OnyenAuthenticator;
 import com.unc.cs.graderprogramplugin.com.sql.DatabaseReader;
 import com.unc.cs.graderprogramplugin.com.sql.IDatabaseReader;
@@ -201,12 +208,74 @@ public class SendAssignmentView extends ViewPart {
 				}
 				final File target = initTarget;
 				final String assignmentSelection = assignmentsCombo.getText();
+				final String typeSelection = assignmentTypeCombo.getText();
 				final String courseSelection = courseCombo.getText();
 				final String onyen = onyenText.getText();
 				final String password = passwordText.getText();
 				new Thread() {
 					@Override
 					public void run() {
+						String vfykey = OnyenAuthenticator.authenticate(onyen, password);
+						String response = HttpGraderCommunicator.submitAssignment(target, assignmentSelection, courseSelection, typeSelection, vfykey);
+						try {
+							final File responseFile = File.createTempFile(projectDir.getPath() + System.getProperty("file.separator") + "grade", ".html");
+							final String url;
+							String urlTmp = "";
+							ArrayList<String> lines = new ArrayList<String>();
+							findurl:
+							for(String line : response.split("\n")) {
+								line = line.trim();
+								if (line.startsWith("<meta http-equiv")) {
+									String[] parts = line.split("\\s*;\\s*");
+									System.out.println(line);
+									for(String part : parts) {
+										System.out.println("\t" + part);
+										if (part.startsWith("url=")) {
+											for(String seg : part.split("\\s*\"\\s*")) {
+												System.out.println("\t\t" + seg);
+												if(!"url=".equals(seg)) {
+													urlTmp = seg;
+													break findurl;
+												}
+											}
+										}
+									}
+								}
+								lines.add(line);
+							}
+							url = urlTmp;
+							System.out.println(url);
+							System.out.println(new URL(url).toString());
+							Files.write(responseFile.toPath(), lines, StandardOpenOption.TRUNCATE_EXISTING);
+							myShell.getDisplay().asyncExec(new Runnable() {
+								@Override
+								public void run() {
+									try {
+										IWebBrowser browser = PlatformUI.getWorkbench().getBrowserSupport().createBrowser(null);
+										//browser.openURL(responseFile.toURI().toURL());
+										System.out.println(url);
+										System.out.println(new URL(url).toString());
+										browser.openURL(new URL(url));
+									} catch (PartInitException e1) {
+										showMessage("Submission failed!");
+										//e1.printStackTrace();
+									} catch (MalformedURLException e1) {
+										showMessage("Submission failed!");
+										//e1.printStackTrace();
+									}
+								}
+							});
+						} catch (IOException e) {
+							e.printStackTrace();
+							myShell.getDisplay().asyncExec(new Runnable() {
+								@Override
+								public void run() {
+									showMessage("Grading failed!");
+								}
+							});
+						}
+						
+						/*
 						GraderCommunicator com = null;
 						try {
 							com = new GraderCommunicator();
@@ -268,7 +337,7 @@ public class SendAssignmentView extends ViewPart {
 							} catch (IOException e) {
 								e.printStackTrace();
 							}
-						}
+						}*/
 					}
 				}.start();
 			}

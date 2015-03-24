@@ -15,7 +15,7 @@ import java.util.zip.ZipOutputStream;
  */
 public class ZipWriter {
 	
-	private static final String FILE_SEPARATOR = System.getProperty("file.separator");
+	private static final String FILE_SEPARATOR = "/"; // defined in zip standard
 	private static int BUFFER_SIZE = 4096;
 	
 	public static void zip(File toZip, File target) throws FileNotFoundException, IOException {

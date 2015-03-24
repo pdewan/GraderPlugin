@@ -1,5 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
+	<classpathentry exported="true" kind="lib" path="commons-logging-1.2.jar"/>
+	<classpathentry exported="true" kind="lib" path="httpcore-4.4.jar" sourcepath="httpcore-4.4-sources.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/GraderProgramPlugin/httpcore-4.4-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry exported="true" kind="lib" path="httpclient-4.4.jar" sourcepath="httpclient-4.4-sources.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/GraderProgramPlugin/httpclient-4.4-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry exported="true" kind="lib" path="httpmime-4.4.jar" sourcepath="httpmime-4.4-sources.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/GraderProgramPlugin/httpmime-4.4-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry exported="true" kind="lib" path="mysql-connector-java-5.1.27-bin.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
 	<classpathentry kind="con" path="org.eclipse.pde.core.requiredPlugins"/>
