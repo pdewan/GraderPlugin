@@ -2,6 +2,7 @@ package com.unc.cs.graderprogramplugin.com;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
@@ -12,46 +13,55 @@ import javax.net.ssl.HttpsURLConnection;
  * @author Andrew Vitkus
  *
  */
-public class OnyenAuthenticator {
+public class OnyenAuthenticator implements AutoCloseable {
 
-	private static HttpsURLConnection grader;
-
-	public static String authenticate(String username, String password) {
-		try {
-			return getVFYKey(username, password);
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-			return "";
-		} catch (IOException e) {
-			e.printStackTrace();
-			return "";
-		} finally {
-			if (grader != null) {
-				disconnect();
-			}
-		}
+	private HttpsURLConnection grader;
+	private final URL GRADER_URL = new URL("https", "onyen.unc.edu", 443, "/cgi-bin/unc_id/authenticator.pl");
+	private boolean isConnected;
+	
+	private OnyenAuthenticator() throws IOException {
+//		grader = (HttpsURLConnection) GRADER_URL.openConnection();
+//		isConnected = true;
 	}
 	
-	private static String getFormHTML() throws MalformedURLException, IOException {
-		connect();
+	public static OnyenAuthenticator instanceOf() throws IOException {
+		return new OnyenAuthenticator();
+	}
+
+	public String authenticate(String username, String password) throws IOException {
+		return getVFYKey(username, password);
+	}
+	
+	private void setup() throws IOException {
+		if (isConnected) {
+			grader.disconnect();
+		}
+		grader = (HttpsURLConnection) GRADER_URL.openConnection();
+		isConnected = true;
+	}
+	
+	private String getFormHTML() throws MalformedURLException, IOException {
+		setup();
 		grader.setRequestMethod("POST");
 		grader.setRequestProperty("getpid", "pid");
 		grader.setRequestProperty("getpid", "givenName");
-		grader.setRequestProperty("getpid", "uncPreferredSurname");
+		grader.setRequestProperty("getpid", "sn");
+		
 		StringBuilder post = new StringBuilder();
 		post.append("getpid=").append("pid");
 		post.append("&getpid=").append("givenName");
-		post.append("&getpid=").append("uncPreferredSurname");
+		post.append("&getpid=").append("sn");
+
 		grader.setDoOutput(true);
 		grader.setDoInput(true);
 		grader.getOutputStream().write(post.toString().getBytes());
 		
-		return getResponse();
+		return getResponse(grader.getInputStream());
 	}
 	
-	private static String getVFYKey(String username, String password) throws IOException {
+	private String getVFYKey(String username, String password) throws IOException {
 		String html = getFormHTML();
-		connect();
+		setup();
 		grader.setRequestMethod("POST");
 		
 		//System.out.println(html);
@@ -64,7 +74,7 @@ public class OnyenAuthenticator {
 		grader.setRequestProperty("pw", password);
 		grader.setRequestProperty("getpid", "pid");
 		grader.setRequestProperty("getpid", "givenName");
-		grader.setRequestProperty("getpid", "uncPreferredSurname");
+		grader.setRequestProperty("getpid", "sn");
 		grader.setRequestProperty("submit", "Continue");
 		
 		StringBuilder post = new StringBuilder();
@@ -74,27 +84,27 @@ public class OnyenAuthenticator {
 		post.append("&pw=").append(password);
 		post.append("&getpid=").append("pid");
 		post.append("&getpid=").append("givenName");
-		post.append("&getpid=").append("uncPreferredSurname");
+		post.append("&getpid=").append("sn");
 		post.append("&submit=").append("Continue");
 		
-		System.out.println(post.toString());
+		//System.out.println(post.toString());
 		
 		grader.setDoOutput(true);
 		grader.setDoInput(true);
 		grader.getOutputStream().write(post.toString().getBytes());
 
-		html = getResponse();
-		System.out.println(html);
+		html = getResponse(grader.getInputStream());
+		//System.out.println(html);
 		return getVFYKeyValue(html);
 	}
-
-	private static void connect() throws MalformedURLException, IOException {
-		URL graderURL = new URL("https", "onyen.unc.edu", 443, "/cgi-bin/unc_id/authenticator.pl");
-		grader = (HttpsURLConnection) graderURL.openConnection();
-	}
-
-	private static void disconnect() {
+	
+	private void disconnect() {
 		grader.disconnect();
+		isConnected = false;
+	}
+	
+	public boolean isConnected() {
+		return isConnected;
 	}
 	
 	private static String getValueFromName(String name, String html) {
@@ -118,21 +128,20 @@ public class OnyenAuthenticator {
 		return getValueFromName("vfykey", html);
 	}
 	
-	private static String getResponse() throws IOException {
+	private static String getResponse(InputStream is) throws IOException {
 		byte[] bytes = new byte[512];
-		BufferedInputStream bis = null;
-		try {
-			bis = new BufferedInputStream(grader.getInputStream());
+		try (BufferedInputStream bis = new BufferedInputStream(is)){
 			StringBuilder response = new StringBuilder();
 			int in = -1;
 			while((in = bis.read(bytes)) != -1) {
 				response.append(new String(bytes, 0, in));
 			}
 			return response.toString();
-		} finally {
-			if (bis != null) {
-				bis.close();
-			}
 		}
+	}
+
+	@Override
+	public void close() throws Exception {
+		disconnect();
 	}
 }

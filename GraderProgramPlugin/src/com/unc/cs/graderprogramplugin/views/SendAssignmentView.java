@@ -12,6 +12,7 @@ import java.nio.file.StandardOpenOption;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 
 import org.eclipse.core.resources.IProject;
@@ -52,6 +53,7 @@ import com.unc.cs.graderprogramplugin.com.sql.IDatabaseReader;
 import com.unc.cs.graderprogramplugin.com.sql.SQLConstants;
 import com.unc.cs.graderprogramplugin.utils.AssignmentFinder;
 import com.unc.cs.graderprogramplugin.utils.FileWriter;
+import com.unc.cs.graderprogramplugin.utils.HtmlHandler;
 import com.unc.cs.graderprogramplugin.utils.ZipWriter;
 
 /**
@@ -88,6 +90,7 @@ public class SendAssignmentView extends ViewPart {
 	 * This is a callback that will allow us to create the viewer and initialize
 	 * it.
 	 */
+	@Override
 	public void createPartControl(Composite parent) {
 		myShell = parent.getShell();
 		
@@ -99,10 +102,11 @@ public class SendAssignmentView extends ViewPart {
 		courseCombo.setToolTipText("The course the assignment is for.");
 		IDatabaseReader dr = new DatabaseReader();
 		try {
-			dr.connect(SQLConstants.username, SQLConstants.password, SQLConstants.server);
+			dr.connect(SQLConstants.USERNAME, SQLConstants.PASSWORD, SQLConstants.DATABASE_URL);
 			courseCombo.setItems(dr.readCourseList());
-		} catch (SQLException e1) {
+		} catch (Exception e1) {
 			//e1.printStackTrace();
+			return;
 		} finally {
 			try {
 				dr.disconnect();
@@ -119,11 +123,12 @@ public class SendAssignmentView extends ViewPart {
 		assignmentTypeCombo.setText("Assignment Type");
 		assignmentTypeCombo.setToolTipText("Choose a type");
 		try {
-			dr.connect(SQLConstants.username, SQLConstants.password, SQLConstants.server);
+			dr.connect(SQLConstants.USERNAME, SQLConstants.PASSWORD, SQLConstants.DATABASE_URL);
 			assignmentTypeCombo.setItems(dr.readAssignmentTypes());
 			assignmentTypeCombo.select(0);
-		} catch (SQLException e1) {
+		} catch (Exception e1) {
 			//e1.printStackTrace();
+			return;
 		} finally {
 			try {
 				dr.disconnect();
@@ -189,7 +194,6 @@ public class SendAssignmentView extends ViewPart {
 	
 	private void attachListeners() {
 		sendButton.addSelectionListener(new SelectionAdapter() {
-
 			@Override
 			public void widgetSelected(SelectionEvent e) {
 				IProject p = assignmentProjects[assignmentsCombo.getSelectionIndex()];
@@ -212,144 +216,76 @@ public class SendAssignmentView extends ViewPart {
 				final String courseSelection = courseCombo.getText();
 				final String onyen = onyenText.getText();
 				final String password = passwordText.getText();
-				new Thread() {
-					@Override
-					public void run() {
-						String vfykey = OnyenAuthenticator.authenticate(onyen, password);
-						String response = HttpGraderCommunicator.submitAssignment(target, assignmentSelection, courseSelection, typeSelection, vfykey);
-						try {
-							final File responseFile = File.createTempFile(projectDir.getPath() + System.getProperty("file.separator") + "grade", ".html");
-							final String url;
-							String urlTmp = "";
-							ArrayList<String> lines = new ArrayList<String>();
-							findurl:
-							for(String line : response.split("\n")) {
-								line = line.trim();
-								if (line.startsWith("<meta http-equiv")) {
-									String[] parts = line.split("\\s*;\\s*");
-									System.out.println(line);
-									for(String part : parts) {
-										System.out.println("\t" + part);
-										if (part.startsWith("url=")) {
-											for(String seg : part.split("\\s*\"\\s*")) {
-												System.out.println("\t\t" + seg);
-												if(!"url=".equals(seg)) {
-													urlTmp = seg;
-													break findurl;
-												}
-											}
-										}
-									}
-								}
-								lines.add(line);
-							}
-							url = urlTmp;
-							System.out.println(url);
-							System.out.println(new URL(url).toString());
-							Files.write(responseFile.toPath(), lines, StandardOpenOption.TRUNCATE_EXISTING);
-							myShell.getDisplay().asyncExec(new Runnable() {
-								@Override
-								public void run() {
-									try {
-										IWebBrowser browser = PlatformUI.getWorkbench().getBrowserSupport().createBrowser(null);
-										//browser.openURL(responseFile.toURI().toURL());
-										System.out.println(url);
-										System.out.println(new URL(url).toString());
-										browser.openURL(new URL(url));
-									} catch (PartInitException e1) {
-										showMessage("Submission failed!");
-										//e1.printStackTrace();
-									} catch (MalformedURLException e1) {
-										showMessage("Submission failed!");
-										//e1.printStackTrace();
-									}
-								}
-							});
-						} catch (IOException e) {
-							e.printStackTrace();
-							myShell.getDisplay().asyncExec(new Runnable() {
-								@Override
-								public void run() {
-									showMessage("Grading failed!");
-								}
-							});
-						}
-						
-						/*
-						GraderCommunicator com = null;
-						try {
-							com = new GraderCommunicator();
-							String vfykey = OnyenAuthenticator.authenticate(onyen, password);
-							com.sendAssignment(target, assignmentSelection, courseSelection, vfykey);
-							try {
-								com.getBooleanResponse();
-							} catch (SocketException ex) {
+				for (int i = 0; i < 1; i ++) {
+					new Thread() {
+						@Override
+						public void run() {
+							String vfykey;
+							try (OnyenAuthenticator oAuth = OnyenAuthenticator.instanceOf()) {
+								vfykey = oAuth.authenticate(onyen, password);
+							} catch (Exception ex) {
 								myShell.getDisplay().asyncExec(new Runnable() {
 									@Override
 									public void run() {
-										showMessage("Authentication failed!");
+										showMessage("Error checking login");
 									}
 								});
+								ex.printStackTrace();
 								return;
 							}
-							String response = com.getUTFResponse();
-							final File responseFile = File.createTempFile(projectDir.getPath() + System.getProperty("file.separator") + "grade", ".html");
-							FileWriter.write(response, responseFile);
-							
-							myShell.getDisplay().asyncExec(new Runnable() {
-								@Override
-								public void run() {
-									try {
-										IWebBrowser browser = PlatformUI.getWorkbench().getBrowserSupport().createBrowser(null);
-										browser.openURL(responseFile.toURI().toURL());
-									} catch (PartInitException e1) {
-										showMessage("Submission failed!");
-										//e1.printStackTrace();
-									} catch (MalformedURLException e1) {
-										showMessage("Submission failed!");
-										//e1.printStackTrace();
-									}
-								}
-							});
-							
-							
-						} catch(SocketException ex) {
-							myShell.getDisplay().asyncExec(new Runnable() {
-								@Override
-								public void run() {
-									showMessage("Submission failed!");
-								}
-							});
-							//ex.printStackTrace();
-						} catch (IOException ex) {
-							myShell.getDisplay().asyncExec(new Runnable() {
-								@Override
-								public void run() {
-									showMessage("Submission failed!");
-								}
-							});
-							//ex.printStackTrace();
-						} finally {
+							final String response = HttpGraderCommunicator.submitAssignment(target, assignmentSelection, courseSelection, typeSelection, vfykey);
 							try {
-								if (com != null) {
-									com.disconnect();
+								final File responseFile = File.createTempFile(projectDir.getPath() + System.getProperty("file.separator") + "grade", ".html");
+								final String[] lines = response.split("\n");
+								for(String line : lines) {
+									System.out.println("*" + line);
 								}
+								final String url = HtmlHandler.getRefreshTarget(lines);
+								System.out.println(url);
+								if (url.isEmpty()) {
+									myShell.getDisplay().asyncExec(new Runnable() {
+										@Override
+										public void run() {
+											showMessage("Grading failed, invalid response!");
+										}
+									});
+									return;
+								}
+								Files.write(responseFile.toPath(), Arrays.asList(lines), StandardOpenOption.TRUNCATE_EXISTING);
+								myShell.getDisplay().asyncExec(new Runnable() {
+									@Override
+									public void run() {
+										try {
+											final IWebBrowser browser = PlatformUI.getWorkbench().getBrowserSupport().createBrowser(null);
+											browser.openURL(new URL(url));
+										} catch (PartInitException e1) {
+											showMessage("Submission failed!");
+											e1.printStackTrace();
+										} catch (MalformedURLException e1) {
+											showMessage("Submission failed!");
+											e1.printStackTrace();
+										}
+									}
+								});
 							} catch (IOException e) {
 								e.printStackTrace();
+								myShell.getDisplay().asyncExec(new Runnable() {
+									@Override
+									public void run() {
+										showMessage("Grading failed!");
+									}
+								});
 							}
-						}*/
-					}
-				}.start();
+						}
+					}.start();
+				}
 			}
-			
 		});
 
 		ResourcesPlugin.getWorkspace().addResourceChangeListener(new IResourceChangeListener() {
-
 			@Override
 			public void resourceChanged(IResourceChangeEvent event) {
 				myShell.getDisplay().syncExec(new Runnable() {
-
 					@Override
 					public void run() {
 						buildCombo(assignmentTypeCombo.getText());
@@ -357,11 +293,9 @@ public class SendAssignmentView extends ViewPart {
 					
 				});
 			}
-			
 		}, IResourceChangeEvent.POST_CHANGE);
 		
 		assignmentTypeCombo.addModifyListener(new ModifyListener() {
-
 			@Override
 			public void modifyText(ModifyEvent e) {
 				buildCombo(assignmentTypeCombo.getText());
@@ -373,7 +307,6 @@ public class SendAssignmentView extends ViewPart {
 		final ISecurePreferences node = root.node("/com/unc");
 		
 		courseCombo.addModifyListener(new ModifyListener() {
-
 			@Override
 			public void modifyText(ModifyEvent e) {
 				storePreference(node, "course", courseCombo.getItem(courseCombo.getSelectionIndex()), true);
@@ -381,7 +314,6 @@ public class SendAssignmentView extends ViewPart {
 		});
 		
 		onyenText.addFocusListener(new FocusAdapter() {
-
 			@Override
 			public void focusLost(FocusEvent e) {
 				storePreference(node, "onyen", onyenText.getText(), true);
@@ -390,7 +322,6 @@ public class SendAssignmentView extends ViewPart {
 		});
 		
 		onyenText.addKeyListener(new KeyAdapter() {
-
 			@Override
 			public void keyPressed(KeyEvent e) {
 				if (e.keyCode == SWT.CR || e.keyCode == SWT.LF) {
@@ -401,22 +332,20 @@ public class SendAssignmentView extends ViewPart {
 		});
 		
 		passwordText.addFocusListener(new FocusAdapter() {
-
 			@Override
 			public void focusLost(FocusEvent e) {
 				storePreference(node, "password", passwordText.getText(), true);
 			}
 			
 		});
+		
 		passwordText.addKeyListener(new KeyAdapter() {
-
 			@Override
 			public void keyPressed(KeyEvent e) {
 				if (e.keyCode == SWT.CR || e.keyCode == SWT.LF) {
 					storePreference(node, "password", passwordText.getText(), true);
 				}
 			}
-			
 		});
 	}
 	
@@ -443,8 +372,7 @@ public class SendAssignmentView extends ViewPart {
 	}
 
 	private void showMessage(String message) {
-		MessageDialog.openInformation(myShell,
-				"Assignment Grader", message);
+		MessageDialog.openInformation(myShell, "Assignment Grader", message);
 	}
 
 	/**

@@ -10,7 +10,7 @@ import com.unc.cs.graderprogramplugin.utils.Course;
  *
  */
 public interface IDatabaseReader {
-	public void connect(String username, String password, String server) throws SQLException;
+	public void connect(String username, String password, String server) throws SQLException, InstantiationException, IllegalAccessException, ClassNotFoundException;
 	
 	public String[] readCourseList() throws SQLException;
 	

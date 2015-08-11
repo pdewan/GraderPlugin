@@ -22,6 +22,7 @@ public class HttpGraderCommunicator {
 	public static String submitAssignment(File file, String assignment, String course, String type, String vfykey) {
 		CloseableHttpClient httpclient = HttpClients.createDefault();
         try {
+        	System.out.println(vfykey);
         	String url = GradingServerConstants.GRADER_SERVER + "/" + GradingServerConstants.SUBMISSION_PATH;
             HttpPost httppost = new HttpPost(url);
 
@@ -37,17 +38,17 @@ public class HttpGraderCommunicator {
 
             httppost.setEntity(reqEntity);
 
-            System.out.println("executing request " + httppost.getRequestLine());
+            //System.out.println("executing request " + httppost.getRequestLine());
             CloseableHttpResponse response = httpclient.execute(httppost);
             try {
-                System.out.println("----------------------------------------");
-                System.out.println(response.getStatusLine());
+                //System.out.println("----------------------------------------");
+                //System.out.println(response.getStatusLine());
                 HttpEntity resEntity = response.getEntity();
-                if (resEntity != null) {
-                    System.out.println("Response content length: " + resEntity.getContentLength());
-                }
+                //if (resEntity != null) {
+                //    System.out.println("Response content length: " + resEntity.getContentLength());
+                //}
                 String responseStr = EntityUtils.toString(resEntity);
-                System.out.println(responseStr);
+                //System.out.println(responseStr);
                 EntityUtils.consume(resEntity);
                 return responseStr;
             } finally {

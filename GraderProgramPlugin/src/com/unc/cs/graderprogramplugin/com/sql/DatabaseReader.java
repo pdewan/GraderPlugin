@@ -17,20 +17,9 @@ public class DatabaseReader implements IDatabaseReader {
 	private Connection connection;
 	
 	@Override
-	public void connect(String username, String password, String server) throws SQLException {
-		Properties connectionProps = new Properties();
-		connectionProps.put("user", username);
-		connectionProps.put("password", password);
-		try {
-			DriverManager.registerDriver((Driver) Class.forName("com.mysql.jdbc.Driver").newInstance());
-		} catch (InstantiationException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-		}
-		connection = DriverManager.getConnection(server, connectionProps);
+	public void connect(String username, String password, String server) throws SQLException, InstantiationException, IllegalAccessException, ClassNotFoundException {
+		DriverManager.registerDriver((Driver) Class.forName("com.mysql.jdbc.Driver").newInstance());
+		connection = DriverManager.getConnection(server, username, password);
 	}
 
 	@Override
