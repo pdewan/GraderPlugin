@@ -94,6 +94,9 @@ public class OnyenAuthenticator implements AutoCloseable {
 		grader.getOutputStream().write(post.toString().getBytes());
 
 		html = getResponse(grader.getInputStream());
+		if (html.contains("Authentication failed")) {
+			return null;
+		}
 		//System.out.println(html);
 		return getVFYKeyValue(html);
 	}

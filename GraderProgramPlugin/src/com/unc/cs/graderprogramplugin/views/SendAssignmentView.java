@@ -192,6 +192,15 @@ public class SendAssignmentView extends ViewPart {
 		
 	}
 	
+	public  void authenticationFailed() {
+		myShell.getDisplay().asyncExec(new Runnable() {
+			@Override
+			public void run() {
+				showMessage("Authentication failed");
+			}
+		});
+	}
+	
 	private void attachListeners() {
 		sendButton.addSelectionListener(new SelectionAdapter() {
 			@Override
@@ -223,13 +232,18 @@ public class SendAssignmentView extends ViewPart {
 							String vfykey;
 							try (OnyenAuthenticator oAuth = OnyenAuthenticator.instanceOf()) {
 								vfykey = oAuth.authenticate(onyen, password);
+								if (vfykey == null) {
+									authenticationFailed();
+									return;
+								}
 							} catch (Exception ex) {
-								myShell.getDisplay().asyncExec(new Runnable() {
-									@Override
-									public void run() {
-										showMessage("Error checking login");
-									}
-								});
+//								myShell.getDisplay().asyncExec(new Runnable() {
+//									@Override
+//									public void run() {
+//										showMessage("Error checking login");
+//									}
+//								});
+								authenticationFailed();
 								ex.printStackTrace();
 								return;
 							}
@@ -246,7 +260,7 @@ public class SendAssignmentView extends ViewPart {
 									myShell.getDisplay().asyncExec(new Runnable() {
 										@Override
 										public void run() {
-											showMessage("Grading failed, invalid response!");
+											showMessage("Grading failed - the server may be down.");
 										}
 									});
 									return;
@@ -258,6 +272,7 @@ public class SendAssignmentView extends ViewPart {
 										try {
 											final IWebBrowser browser = PlatformUI.getWorkbench().getBrowserSupport().createBrowser(null);
 											browser.openURL(new URL(url));
+											System.out.println ("Opened URL");
 										} catch (PartInitException e1) {
 											showMessage("Submission failed!");
 											e1.printStackTrace();
