@@ -77,6 +77,7 @@ public class SendAssignmentView extends ViewPart {
 	private Label passwordLabel;
 	private Text passwordText;
 	private Shell myShell;
+	protected Label studyLabel;
 	
 	private IProject[] assignmentProjects;
 	
@@ -189,7 +190,9 @@ public class SendAssignmentView extends ViewPart {
 		if (assignmentsCombo.getItemCount() > 0) {
 			assignmentsCombo.select(0);
 		}
-		
+//		
+//		studyLabel = new Label(parent, SWT.LEFT);
+//		studyLabel.setText("By sending your assignment, you are consenting to be a participant in the study described here\n:http://www.cs.unc.edu/~dewan/comp401/current/Downloads/Adult%20Consent%20Form.htm");
 	}
 	
 	public  void authenticationFailed() {
@@ -205,13 +208,25 @@ public class SendAssignmentView extends ViewPart {
 		sendButton.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
-				IProject p = assignmentProjects[assignmentsCombo.getSelectionIndex()];
-				final File projectDir = new File(p.getLocationURI());
+//				IProject p = assignmentProjects[assignmentsCombo.getSelectionIndex()];
+//				final File projectDir = new File(p.getLocationURI());
+				
 				File initTarget = null;
+				IProject p = null;
+				File projectDirTemp = null;
+				
 				try {
-					initTarget = File.createTempFile(projectDir.getParentFile().getPath() + System.getProperty("file.separator") + p.getName(), ".zip");
-					ZipWriter.zip(projectDir, initTarget);
-				} catch (IOException ex) {
+					// move lines from above
+				    p = assignmentProjects[assignmentsCombo.getSelectionIndex()];
+					projectDirTemp = new File(p.getLocationURI());
+					initTarget = null;
+					// end move
+					
+					initTarget = File.createTempFile(projectDirTemp.getParentFile().getPath() + System.getProperty("file.separator") + p.getName(), ".zip");
+					ZipWriter.zip(projectDirTemp, initTarget);
+				} catch (Exception ex) {
+
+//				} catch (IOException ex) {
 					showMessage("Failed to prep assignment for submission!");
 					if (initTarget.exists()) {
 						initTarget.delete();
@@ -219,6 +234,8 @@ public class SendAssignmentView extends ViewPart {
 					ex.printStackTrace();
 					return;
 				}
+				final File projectDir = projectDirTemp;
+				
 				final File target = initTarget;
 				final String assignmentSelection = assignmentsCombo.getText();
 				final String typeSelection = assignmentTypeCombo.getText();
